@@ -3,6 +3,7 @@ import torch
 import json
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm import tqdm
 
 DATA_PATH = "./datasets/json/"
 
@@ -87,28 +88,38 @@ def json_loader(data_path, task=1, type='train'):
             return id_list, input_list, bbox_list
 
 # load task1+2_train.json by parts in case the whole file is too big
+
 def json_loader_part(data_path, cv=0):
     input_list = []
     target_list = []
+    
     if cv == 0:
         load_part_id = [1,2,3,4,5]  # load all 5 files
     else:
         load_part_id = [cv]
-    for part in load_part_id:
-        data = json.load(open(data_path+'/2Dto3D_train_part'+str(part)+'.json'))
+    
+    total_items = sum(len(json.load(open(data_path+f'/2Dto3D_train_part{part}.json'))) for part in load_part_id)
+    
+    for part in tqdm(load_part_id, desc="Loading parts"):
+        data = json.load(open(data_path+f'/2Dto3D_train_part{part}.json'))
         length = len(data)
+        
         for i in range(length):
             sample_2d = torch.zeros(1, 133, 2)
             sample_3d = torch.zeros(1, 133, 3)
+            
             for j in range(133):
                 sample_2d[0, j, 0] = data[str(i+length*(part-1))]['keypoints_2d'][str(j)]['x']
                 sample_2d[0, j, 1] = data[str(i+length*(part-1))]['keypoints_2d'][str(j)]['y']
                 sample_3d[0, j, 0] = data[str(i+length*(part-1))]['keypoints_3d'][str(j)]['x']
                 sample_3d[0, j, 1] = data[str(i+length*(part-1))]['keypoints_3d'][str(j)]['y']
                 sample_3d[0, j, 2] = data[str(i+length*(part-1))]['keypoints_3d'][str(j)]['z']
+            
             input_list.append(sample_2d)
             target_list.append(sample_3d)
+    
     return input_list, target_list
+
 
 def get_limb(X, Y, Z=None, id1=0, id2=1):
     if Z is not None:
